@@ -19,6 +19,7 @@ Los ID de solicitud llevan dos dígitos (`SC-03`) y no deben confundirse con los
 | ID | Fecha | Solicitante | Descripción | Motivo | Impacto (alcances / esfuerzo) | Estado | Aprobó | Issue | Versión |
 |---|---|---|---|---|---|---|---|---|---|
 | SC-01 | 2026-11-11 | Equipo | Implementar el backend con arquitectura limpia por capas en lugar de la estructura plana de paquetes que sugieren los PRD (ver detalle) | Aislar las reglas de negocio de Spring y JPA y poder verificar las dependencias con ArchUnit | `api`, `db`, `config`, `eventos`, `tickets`, `usuarios`, `auth` · arquitectura general, planes 002 a 004 · transversal a todas las fases | Aprobado | Líder | #1 | |
+| SC-02 | 2026-11-11 | Equipo | Las entidades inactivas no participan en operaciones nuevas: no se asocian artistas inactivos a eventos y no se venden entradas de eventos en sedes inactivas (ver detalle) | Coherencia con la regla que ya impide publicar un evento en una sede inactiva (BR-EVENT-009) y evitar programar artistas o vender entradas sobre entidades que ya no operan | `eventos`, `tickets` · specs de eventos y tickets, planes 002 y 003 · 0,25 días | Aprobado | Líder | #11 | |
 
 ## Detalle de solicitudes
 
@@ -34,3 +35,12 @@ Los ID de solicitud llevan dos dígitos (`SC-03`) y no deben confundirse con los
   6. Se incorpora ArchUnit para verificar las dependencias.
 - **No cambia:** los 20 endpoints y sus respuestas, las reglas de negocio `BR-*`, el uso de Maven, Java 21, Spring Boot 4, JJWT y los criterios de aceptación de cada PRD.
 - **Impacto:** más clases y mapeos que en la estructura plana; a cambio, un dominio sin frameworks y dependencias verificables.
+
+### SC-02 — Las entidades inactivas no participan en operaciones nuevas
+
+- **Situación en los PRD:** BR-EVENT-010 y BR-EVENT-011 solo impiden asociar dos veces un artista y asociar artistas a eventos cancelados o finalizados; no consideran artistas inactivos. Las reglas de compra BR-TICKET-001 a BR-TICKET-009 no consideran si la sede del evento está activa. Sí existe BR-EVENT-009, que impide publicar un evento en una sede inactiva.
+- **Cambio propuesto:**
+  1. Asociar un artista inactivo a un evento se rechaza por regla de negocio (conflicto).
+  2. Comprar una entrada de un evento cuya sede está inactiva se rechaza por regla de negocio (conflicto).
+- **No cambia:** los 20 endpoints y sus respuestas de éxito; las consultas de eventos de una sede inactiva; las entradas ya vendidas, que siguen siendo válidas (un `ADMIN` puede cancelarlas una a una).
+- **Impacto:** dos validaciones adicionales con sus pruebas, reflejadas en los specs de `eventos` y `tickets` y en los planes 002 y 003.
