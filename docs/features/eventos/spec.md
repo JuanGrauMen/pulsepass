@@ -3,7 +3,8 @@
 **Created**: 2026-11-11  
 **Área**: `eventos`  
 **Rol principal**: `ADMIN` (gestión de eventos) y visitante anónimo (consulta)  
-**Fuentes**: PRD de Servicios (BR-EVENT-001 a BR-EVENT-011, FR-SVC-003 a FR-SVC-008), PRD de Controladores (FR-CTRL-EVT-001 a FR-CTRL-EVT-006), PRD de Seguridad (FR-SEC-EVT-01 a FR-SEC-EVT-06) y PRD de Frontend (estados visibles para el público)
+**Fuentes**: PRD de Servicios (BR-EVENT-001 a BR-EVENT-011, FR-SVC-003 a FR-SVC-008), PRD de Controladores (FR-CTRL-EVT-001 a FR-CTRL-EVT-006), PRD de Seguridad (FR-SEC-EVT-01 a FR-SEC-EVT-06) y PRD de Frontend (estados visibles para el público)  
+**Solicitudes de cambio**: SC-02 (no se asocian artistas inactivos a eventos)
 
 ---
 
@@ -113,18 +114,18 @@ Como persona interesada en un evento, quiero ver su detalle completo, para decid
    - **When** cualquier persona lo consulta por su código
    - **Then** el sistema devuelve su identificador, código, nombre, descripción, categoría, estado, fecha, edad mínima, sede (código y nombre) y sus artistas
 
-2. **Scenario**: Evento agotado, cancelado o finalizado
-   - **Given** un evento en uno de esos estados
+2. **Scenario**: Evento agotado, o cancelado o finalizado que estuvo publicado
+   - **Given** un evento agotado, o un evento cancelado o finalizado que estuvo publicado alguna vez
    - **When** cualquier persona lo consulta por su código
    - **Then** el sistema devuelve su detalle indicando el estado, para que la persona entienda por qué no se puede comprar
 
-3. **Scenario**: Borrador consultado por el público
-   - **Given** un evento en borrador
+3. **Scenario**: Borrador, o cancelado sin haberse publicado, consultado por el público
+   - **Given** un evento en borrador, o un evento cancelado que nunca fue publicado
    - **When** lo consulta una persona sin sesión o un `USER`
-   - **Then** el sistema responde como si el evento no existiera (no encontrado) y no revela que es un borrador
+   - **Then** el sistema responde como si el evento no existiera (no encontrado) y no revela que existe ni cuál es su estado
 
-4. **Scenario**: Borrador consultado por personal autorizado
-   - **Given** un evento en borrador
+4. **Scenario**: Borrador, o cancelado sin haberse publicado, consultado por personal autorizado
+   - **Given** un evento en borrador, o un evento cancelado que nunca fue publicado
    - **When** lo consulta un `STAFF` o un `ADMIN`
    - **Then** el sistema devuelve su detalle completo
 
@@ -188,7 +189,7 @@ Como administrador, quiero indicar qué artistas participan en un evento, para q
 **Acceptance Scenarios**:
 
 1. **Scenario**: Asociación exitosa
-   - **Given** un evento que no está cancelado ni finalizado y un artista existente
+   - **Given** un evento que no está cancelado ni finalizado y un artista existente y activo
    - **When** un administrador asocia el artista al evento
    - **Then** el sistema devuelve el evento actualizado con el artista incluido
 
@@ -207,12 +208,17 @@ Como administrador, quiero indicar qué artistas participan en un evento, para q
    - **When** un administrador intenta asociarle un artista
    - **Then** el sistema rechaza la operación como conflicto y no modifica el evento
 
-5. **Scenario**: Evento o artista inexistente
+5. **Scenario**: Artista inactivo
+   - **Given** un evento que admite artistas y un artista que no está activo
+   - **When** un administrador intenta asociar el artista al evento
+   - **Then** el sistema rechaza la operación como conflicto por regla de negocio y no modifica el evento
+
+6. **Scenario**: Evento o artista inexistente
    - **Given** un código de evento o un identificador de artista que no existe
    - **When** un administrador intenta asociarlos
    - **Then** el sistema informa cuál de los dos no fue encontrado y no modifica nada
 
-6. **Scenario**: Usuario sin permiso
+7. **Scenario**: Usuario sin permiso
    - **Given** una persona sin sesión o con sesión de un rol distinto de `ADMIN`
    - **When** intenta asociar un artista
    - **Then** el sistema no lo permite y no modifica el evento, según la política del área `auth`
@@ -232,7 +238,7 @@ Como persona que sigue a un artista, quiero ver en qué eventos se presenta, par
 1. **Scenario**: Artista con eventos
    - **Given** un artista asociado a eventos publicados y a un evento en borrador
    - **When** una persona sin sesión o un `USER` consulta los eventos de ese artista por su nombre artístico
-   - **Then** el sistema devuelve el resumen de los eventos que no están en borrador, ordenados por fecha ascendente
+   - **Then** el sistema devuelve el resumen de los eventos visibles para el público, ordenados por fecha ascendente
 
 2. **Scenario**: Personal autorizado
    - **Given** el mismo artista
@@ -263,15 +269,15 @@ Como persona que sigue a un artista, quiero ver en qué eventos se presenta, par
 
 ### Edge Cases
 
-- **Estados sin operación**: en esta versión no existe una operación para cancelar ni para finalizar un evento. Esos estados existen y sus reglas se aplican, pero solo se cargan con un script SQL de pruebas E2E.
+- **Estados sin operación**: en esta versión no existe una operación para cancelar ni para finalizar un evento. Esos estados existen y sus reglas se aplican, pero solo se cargan con un script SQL de pruebas E2E, que incluye un evento cancelado que estuvo publicado y otro cancelado sin haberse publicado nunca.
 - **Estado agotado**: lo asigna el área `tickets` cuando una compra completa la capacidad de la sede. Esta área solo lo consulta.
 - **Fechas y zona horaria**: las fechas de los eventos se interpretan en la zona `America/Bogota`. Una fecha es futura si es posterior al instante actual en esa zona, medido con un reloj inyectado y configurable para poder fijarlo en las pruebas.
-- **Visibilidad**: el público ve todo evento que no está en borrador. Un evento cancelado antes de publicarse también quedaría visible; cuando exista una operación de cancelación habrá que decidir cómo distinguirlo.
+- **Visibilidad**: el público ve los eventos publicados y agotados, y los cancelados o finalizados que estuvieron publicados alguna vez. Un borrador, o un evento cancelado sin haberse publicado nunca, solo lo ven `STAFF` y `ADMIN`. Para distinguirlos, el sistema registra internamente cuándo se publicó cada evento.
 - **Código de evento**: la coincidencia es exacta; `CMF-2026` y `cmf-2026` son códigos distintos.
-- **Artista inactivo**: no hay una regla que impida asociarlo a un evento, por lo que se permite.
+- **Artista inactivo**: no se puede asociar a un evento (solicitud de cambio SC-02). Si un artista ya asociado se desactiva después, el evento conserva la asociación.
 - **Cartelera sin paginación**: devuelve todos los eventos visibles, igual que el cliente espera.
 - **Edad mínima**: 0 significa sin restricción; el valor negativo no es válido.
-- **Una sede inactiva con eventos existentes**: los eventos ya creados siguen consultables. La sede inactiva solo impide crear o publicar eventos nuevos.
+- **Una sede inactiva con eventos existentes**: los eventos ya creados siguen consultables. La sede inactiva impide crear y publicar eventos nuevos, y bloquea la compra de entradas de sus eventos (regla del área `tickets`, solicitud de cambio SC-02). Las entradas ya vendidas siguen siendo válidas.
 
 ---
 
@@ -293,23 +299,25 @@ Como persona que sigue a un artista, quiero ver en qué eventos se presenta, par
 - **FR-012**: Al publicar, la fecha del evento MUST seguir siendo futura (BR-EVENT-008) y su sede MUST seguir activa (BR-EVENT-009).
 - **FR-013**: El sistema MUST permitir consultar la cartelera y MUST incluir únicamente los eventos publicados y agotados, ordenados por fecha ascendente.
 - **FR-014**: Una cartelera sin eventos MUST responderse como éxito con una lista vacía.
-- **FR-015**: El sistema MUST permitir consultar un evento por su código. Cualquier persona MUST poder ver un evento que no esté en borrador.
-- **FR-016**: Un evento en borrador MUST ser visible solo para `STAFF` y `ADMIN`. Para cualquier otra persona MUST responderse como no encontrado, sin revelar que existe.
+- **FR-015**: El sistema MUST permitir consultar un evento por su código. Cualquier persona MUST poder ver un evento publicado o agotado, y un evento cancelado o finalizado que haya estado publicado alguna vez.
+- **FR-016**: Un evento en borrador, o cancelado sin haber sido publicado nunca, MUST ser visible solo para `STAFF` y `ADMIN`. Para cualquier otra persona MUST responderse como no encontrado, sin revelar que existe.
 - **FR-017**: El sistema MUST permitir a un `ADMIN` asociar un artista existente a un evento y MUST devolver el evento actualizado.
 - **FR-018**: El sistema MUST NOT permitir asociar dos veces el mismo artista a un evento (BR-EVENT-010).
 - **FR-019**: El sistema MUST NOT permitir asociar artistas a un evento cancelado o finalizado (BR-EVENT-011).
 - **FR-020**: Un evento o un artista inexistente MUST informarse como no encontrado, indicando cuál de los dos falta.
 - **FR-021**: El sistema MUST permitir consultar los eventos de un artista por su nombre artístico, ignorando mayúsculas y minúsculas, ordenados por fecha ascendente.
-- **FR-022**: Quien no sea `STAFF` ni `ADMIN` MUST ver únicamente los eventos que no están en borrador; `STAFF` y `ADMIN` MUST ver todos.
+- **FR-022**: Quien no sea `STAFF` ni `ADMIN` MUST ver únicamente los eventos visibles para el público (FR-015 y FR-016); `STAFF` y `ADMIN` MUST ver todos.
 - **FR-023**: Si el artista no existe, el sistema MUST informar que no fue encontrado usando el contrato de errores común. Si existe pero no tiene eventos visibles, MUST responder con éxito y una lista vacía.
-- **FR-024**: Las operaciones de crear, publicar y asociar artistas MUST estar reservadas a `ADMIN`. La consulta de cartelera, de detalle de un evento no borrador y de eventos por artista MUST ser pública. Las respuestas de "no autenticado" y "sin permiso" siguen la política del área `auth`.
+- **FR-024**: Las operaciones de crear, publicar y asociar artistas MUST estar reservadas a `ADMIN`. La consulta de cartelera, de detalle de un evento visible para el público y de eventos por artista MUST ser pública. Las respuestas de "no autenticado" y "sin permiso" siguen la política del área `auth`.
 - **FR-025**: La respuesta de un evento MUST incluir identificador, código, nombre, descripción, categoría, estado, fecha, edad mínima, código y nombre de la sede, y sus artistas. El resumen de un evento MUST incluir código, nombre, categoría, fecha, estado y los datos de su sede (nombre y ciudad).
 - **FR-026**: El sistema MUST devolver datos mediante objetos de transferencia y nunca exponer entidades de persistencia.
 - **FR-027**: Los textos del evento MUST respetar una longitud máxima. [NEEDS CLARIFICATION: las longitudes máximas de código, nombre y descripción dependen del PRD de Persistencia, que aún no está disponible]
+- **FR-028**: El artista que se asocia a un evento MUST estar activo; asociar un artista inactivo MUST rechazarse por regla de negocio (solicitud de cambio SC-02).
+- **FR-029**: El sistema MUST registrar internamente la fecha y hora en que un evento se publica. Ese dato decide la visibilidad pública de los eventos cancelados y finalizados y MUST NOT incluirse en las respuestas.
 
 ### Key Entities
 
-- **Event (evento)**: actividad con fecha, que se realiza en una sede. Atributos de negocio: identificador, código único, nombre, descripción, categoría (música, deportes, tecnología, educación, cultura, entretenimiento), estado, fecha y hora, edad mínima y sede. Se relaciona con una sede, con muchos artistas y con muchos tickets.
+- **Event (evento)**: actividad con fecha, que se realiza en una sede. Atributos de negocio: identificador, código único, nombre, descripción, categoría (música, deportes, tecnología, educación, cultura, entretenimiento), estado, fecha y hora, edad mínima, sede y fecha de publicación (dato interno que no se devuelve en las respuestas). Se relaciona con una sede, con muchos artistas y con muchos tickets.
 - **Estado del evento**: borrador, publicado, agotado, cancelado o finalizado. Transiciones: borrador a publicado; publicado a agotado; agotado a finalizado; borrador o publicado a cancelado.
 
 ---
@@ -320,8 +328,9 @@ Como persona que sigue a un artista, quiero ver en qué eventos se presenta, par
 
 - **SC-001**: El 100 % de los eventos creados con datos válidos queda en estado borrador.
 - **SC-002**: 0 % de los eventos se crea con un código repetido, una sede inexistente o inactiva, o una fecha no futura.
-- **SC-003**: 0 % de los borradores es visible para una persona sin sesión o con rol `USER`, y el 100 % de las consultas a un borrador por esas personas se responde como no encontrado.
+- **SC-003**: 0 % de los borradores, y de los eventos cancelados que nunca se publicaron, es visible para una persona sin sesión o con rol `USER`, y el 100 % de las consultas a esos eventos por esas personas se responde como no encontrado.
 - **SC-004**: El 100 % de las publicaciones de un evento que no está en borrador se rechaza sin modificar el evento.
 - **SC-005**: El 100 % de las operaciones de crear, publicar y asociar artistas ejecutadas sin rol `ADMIN` se rechaza sin modificar datos.
 - **SC-006**: 0 % de las asociaciones de artista queda duplicada.
 - **SC-007**: El 100 % de las consultas a un evento o artista inexistente se responde con el contrato de errores común e identifica el valor consultado.
+- **SC-008**: 0 % de las asociaciones de un artista inactivo a un evento se completa.
