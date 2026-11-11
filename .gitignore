@@ -1,0 +1,50 @@
+### Maven ###
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+.mvn/timing.properties
+dependency-reduced-pom.xml
+
+### Secretos ###
+.env
+!.env.example
+
+### Postman (exportaciones con tokens y credenciales) ###
+*.postman_environment.json
+*.postman_globals.json
+
+### Enunciado (PRD del docente en PDF; se comparten por fuera del repositorio) ###
+docs/enunciado/*.pdf
+
+### Frontend ###
+node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/.env
+*.local
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+/out/
+/backend/out/
+
+### Eclipse / STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### VS Code ###
+.vscode/
+
+### Archivos del sistema ###
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
