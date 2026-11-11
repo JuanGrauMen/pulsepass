@@ -18,7 +18,7 @@ Los ID de solicitud llevan dos dígitos (`SC-03`) y no deben confundirse con los
 
 | ID | Fecha | Solicitante | Descripción | Motivo | Impacto (alcances / esfuerzo) | Estado | Aprobó | Issue | Versión |
 |---|---|---|---|---|---|---|---|---|---|
-| SC-01 | 2026-11-11 | Equipo | Implementar el backend con arquitectura limpia por capas en lugar de la estructura plana de paquetes que sugieren los PRD (ver detalle) | Aislar las reglas de negocio de Spring y JPA y poder verificar las dependencias con ArchUnit | `api`, `db`, `config`, `eventos`, `tickets`, `usuarios`, `auth` · arquitectura general, planes 002 a 004 · transversal a todas las fases | Propuesto | | — | |
+| SC-01 | 2026-11-11 | Equipo | Implementar el backend con arquitectura limpia por capas en lugar de la estructura plana de paquetes que sugieren los PRD (ver detalle) | Aislar las reglas de negocio de Spring y JPA y poder verificar las dependencias con ArchUnit | `api`, `db`, `config`, `eventos`, `tickets`, `usuarios`, `auth` · arquitectura general, planes 002 a 004 · transversal a todas las fases | Aprobado | Líder | #1 | |
 
 ## Detalle de solicitudes
 
